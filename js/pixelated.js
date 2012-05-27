@@ -7,52 +7,63 @@ var Pixelated = function( conf ) {
 	var table = buildTable();
 	var events = [];
 	var lastColor;
+	var endGame = false;
+	var MOVES = {
+		LEFT : function(x,y){ return {x:x-1,y:y}},
+		RIGHT : function(x,y){ return {x:x+1,y:y}},
+		UP : function(x,y){ return {x:x,y:y+1}},
+		DOWN : function(x,y){ return {x:x,y:y-1}},
+	}
+	
 	function buildTable() {
 		var table = [];
-		for (var x=0; x< X; x++){
-			table[x] = [];
-			for (var y=0; y< Y; y++){
-				cl = getAnyColor();
-				table[x][y]=cl;
-			}
+		for (var x=0; x< X*Y; x++){
+			table[x] = getAnyColor();
 		}
 		return table;
 	}
 
 	function getAnyColor() {
-		var idx = Math.floor(Math.random()* (colors.length));
+		var idx = Math.floor(Math.random() * (colors.length));
 		return colors[idx];
 	}
+	function hasSomething(pixelsToCheck, checkedPixels, x, y, move, color){
+		var pos = {x:x,y:y};
+		while( (pos = move.call(pos.x,pos.y)) && pox.x>-1 && pos.x< X-1 && pox.y>-1 && pos.y<Y-1){
+			if( pixelsToCheck[pos.x][pos.y]!= undefined && checkedPixels[pos.x][pos.y]==undefined )
+				return true;
+		}
+		
+		return false;
+	}
 	//Change all of this. For only check the portiontion of table that maybe change
-	function checkNeighboards(checkedPixels,x,y,color){
-		var paintedArea = [];
-		
-		if(table[x][y]!=color)
+	function checkNeighboards(pixelsToCheck, checkedPixels,x,color){
+		var paintedArea = {length:0,area:[]}; //Becasuse size of array count null / undefined positions
+		if(pixelsToCheck[x]!=color)
 			return paintedArea;
 		
-		if(checkedPixels[x] && checkedPixels[x][y])
+		if(checkedPixels[x])
 			return paintedArea;
-		if(!checkedPixels[x])
-			checkedPixels[x] = [];
-		checkedPixels[x][y]=true;
+		checkedPixels[x]=true;
 		
-		if( x>0 )
-			paintedArea = paintedArea.concat(checkNeighboards(checkedPixels,x-1,y,color));
-		if( y>0 )
-			paintedArea = paintedArea.concat(checkNeighboards(checkedPixels,x,y-1,color));
-		if( y<Y-1 )
-			paintedArea = paintedArea.concat(checkNeighboards(checkedPixels,x,y+1,color));
-		if( x<X-1 )
-			paintedArea = paintedArea.concat(checkNeighboards(checkedPixels,x+1,y,color));
+		if( x%X>0 ) //&& hasSomething(pixelsToCheck,checkedPixels,x-1,y,MOVES.LEFT,color))
+			paintedArea = union(paintedArea,(checkNeighboards(pixelsToCheck,checkedPixels,x-1,color)));
+		if( Math.floor(x/X)>0 )
+			paintedArea = union(paintedArea,(checkNeighboards(pixelsToCheck,checkedPixels, x-X,color)));
+		if( Math.floor(x/X)<Y-1 )
+			paintedArea = union(paintedArea,(checkNeighboards(pixelsToCheck,checkedPixels,x+X,color)));
+		if( x%X<X-1 )
+			paintedArea = union(paintedArea,(checkNeighboards(pixelsToCheck,checkedPixels,x+1,color)));
 		
-		paintedArea.push({'x':x,'y':y});
-			
+		paintedArea.area[x] = true;
+		paintedArea.length++;
+		
 		return paintedArea;
 	}
 	function getPaintedArea(){
-		var backColor = table[0][0];
+		var backColor = table[0];
 
-		var paintedArea = checkNeighboards([],0,0,backColor);	
+		var paintedArea = checkNeighboards(table,[],0,backColor);	
 
 		return paintedArea;
 	}
@@ -75,58 +86,52 @@ var Pixelated = function( conf ) {
 	this.getLeftMoves = function(){
 		return leftQty;
 	}
+	this.getWidth = function(){
+		return X;
+	}
 	
 	this.paintTo = function( color ){
 		
-		if(lastColor===color)
+		if( lastColor === color || endGame )
 			return;
+		
 		lastColor = color;
+
+		leftQty--;
+		triggEvent('LeftUpdate',leftQty);
 		
 		var paintedArea = getPaintedArea();
 		
-		for (var x in paintedArea){
-			table[paintedArea[x].x][paintedArea[x].y]=color;
+		for (var i in paintedArea.area){
+			table[i]=color;
 		}
 		
-		triggEvent('TableChange',{'color':color,'area':paintedArea});
+		triggEvent('TableChange',{'color':color,'area':paintedArea.area});
 		
-		var paintedAreaLength = getPaintedArea().length;
+		var newPaintedArea = getPaintedArea();
 		
-		if(paintedAreaLength == X*Y)
+		if(newPaintedArea.length == X*Y){
 			triggEvent('Win');
-		leftQty--;
-		
-		if(leftQty==0){
+			endGame  = true;
+		} else if(leftQty==1){
 			triggEvent('GameOver');
+			endGame  = true;
 		}
-		triggEvent('LeftUpdate',leftQty);
+		
+		this.printTable(table);
 		
 	}
 	this.printTable = function(table){
 		var dbg = [];
 		var width = getMaxLength();
-		for (var y=0; y< Y; y++){
-			for (var x=0; x< X; x++){
-				dbg.push(table[x][y]);
-				dbg = dbg.concat(getBlanks(width - table[x][y].length));
-				dbg.push('|');
-			}
-			dbg.push('\n');
+		for (var x=0; x< X*Y; x++){
+			if( (x % X) == 0)
+				dbg.push('\n');
+			dbg.push(table[x]);
+			dbg = dbg.concat(getBlanks(width - table[x].length));
+			dbg.push('|');
 		}
 		console.log(dbg.join(''));
-	}
-	this.paintedAre2Table = function(obj) {
-		var table = [];
-		for (var x=0; x< X; x++){
-			table[x] = [];
-			for (var y=0; y< Y; y++){
-				table[x][y]='';
-			}
-		}
-		for (var i=0; i< obj.length; i++){
-			table[obj[i].x][obj[i].y]='X';
-		}
-		return table;
 	}
 	function getBlanks(num){
 		var blanks = [];
@@ -141,5 +146,20 @@ var Pixelated = function( conf ) {
 			length = Math.max(length,colors[i].length);
 		}
 		return length;
+	}
+	function union(a1,a2){
+		var one = a1;
+		var other = a2;
+		
+		if(a1.area.length>a2.area){
+			one = a2;
+			other = a1;
+		}
+		
+		for(var a in one.area){
+			other.area[a]=one.area[a];
+			other.length++;
+		}
+		return other;
 	}
 };

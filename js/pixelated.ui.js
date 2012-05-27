@@ -1,5 +1,5 @@
-$(function(){
     var pix = new Pixelated();
+$(function(){
     
     var $color = $('<div class="pix">');
     var $optionColor = $('<div class="option" style="height:30px;width:45px;display:block;position:absolute;top:220;cursor:pointer">');
@@ -26,14 +26,12 @@ $(function(){
         var clonned;
         var options = $();
         for (var x=0; x< table.length; x++){
-            for (var y=0; y< table[x].length; y++){
-                    clonned = $color.clone();
-                    clonned.css('left',x*20 + 'px');
-                    clonned.css('top', y*20 + 'px');
-                    clonned.css('background-color', table[x][y]);
-                    clonned.attr('id','px-'+x+'-'+y);
-                    options = options.add(clonned);
-            }	
+                clonned = $color.clone();
+                clonned.css('left',(x%pix.getWidth())*20 + 'px');
+                clonned.css('top', Math.floor(x/pix.getWidth())*20 + 'px');
+                clonned.css('background-color', table[x]);
+                clonned.attr('id','px-'+x);
+                options = options.add(clonned);
         }
         $('body').append(options);
         
@@ -56,9 +54,8 @@ $(function(){
     })
     function tableChange(changes){
         var elems = $();
-        var table = pix.getTable()
-        for (var i=0; i< changes.area.length; i++){
-                var elem = $('#px-'+changes.area[i].x+'-'+changes.area[i].y);
+        for (var i in changes.area){
+                var elem = $('#px-'+i);
                 elems = elems.add(elem);
                 elem[0].color=changes.color;
         }
