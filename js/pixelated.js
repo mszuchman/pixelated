@@ -6,56 +6,81 @@ var Pixelated = function( conf ) {
 	var leftQty = conf && conf.maxTries || 29;
 	var table = buildTable();
 	var events = [];
-	var lastColor;
+	var lastColor = table[0];
 	var endGame = false;
 	var MOVES = {
-		LEFT : function(x,y){ return {x:x-1,y:y}},
-		RIGHT : function(x,y){ return {x:x+1,y:y}},
-		UP : function(x,y){ return {x:x,y:y+1}},
-		DOWN : function(x,y){ return {x:x,y:y-1}},
+		LEFT : { move: function(pos){ return pos-1 }, canMove:function(pos){ return pos%X>0 }},
+		RIGHT : { move: function(pos){ return pos+1 }, canMove:function(pos){ return pos%X<X-1 }},
+		UP : { move: function(pos){ return pos-X }, canMove:function(pos){ return Math.floor(pos/X)>0 }},
+		DOWN : { move: function(pos){return pos+X },canMove:function(pos){return Math.floor(pos/X)<Y-1}}
 	}
 	
 	function buildTable() {
 		var table = [];
-		for (var x=0; x< X*Y; x++){
-			table[x] = getAnyColor();
+		var originalColor = getAnyColorOf(colors);
+		var length = X*Y;
+		for (var x=0; x< length; x++){
+			table[x] = getAnyColorOf(colors);
+		}
+		return table;
+		var colorsToPaint = getElementsWithout(colors,originalColor);
+		for(var k=0; k<leftQty;k++){
+			color = getAnyColorOf(colorsToPaint);
+			
+			var posToCut = Math.floor(Math.random() * length);
+			var height = Math.floor(Math.random() * Math.floor((length - posToCut)/(X*2)) ) +1;
+			var width = Math.floor(Math.random() * posToCut%(X/2))+1 ;
+			for(var i=posToCut; i<posToCut+width;i++){
+				for(var j=i; j< (i + height*X);j+=X){
+					if(table[j] == originalColor)
+						table[j] = color;
+				}
+			}
+			
 		}
 		return table;
 	}
-
-	function getAnyColor() {
-		var idx = Math.floor(Math.random() * (colors.length));
-		return colors[idx];
+	function getElementsWithout(arr, element){
+		var newArray = [];
+		for(var a in arr){
+			if(arr[a]!=element)
+				newArray.push(arr[a]);
+		}
+		return newArray;
 	}
-	function hasSomething(pixelsToCheck, checkedPixels, x, y, move, color){
-		var pos = {x:x,y:y};
-		while( (pos = move.call(pos.x,pos.y)) && pox.x>-1 && pos.x< X-1 && pox.y>-1 && pos.y<Y-1){
-			if( pixelsToCheck[pos.x][pos.y]!= undefined && checkedPixels[pos.x][pos.y]==undefined )
+	function getAnyColorOf(colorsToPaint) {
+		var idx = Math.floor(Math.random() * (colorsToPaint.length));
+		return colorsToPaint[idx];
+	}
+	function hasSomething(pixelsToCheck, checkedPixels, pos,movement, color){
+		while( movement.canMove(pos) ){
+			pos = movement.move(pos);
+			if( pixelsToCheck[pos]== color && checkedPixels[pos]==undefined )
 				return true;
 		}
 		
 		return false;
 	}
-	//Change all of this. For only check the portiontion of table that maybe change
-	function checkNeighboards(pixelsToCheck, checkedPixels,x,color){
+	//Change all of this. For only check the portiontion of table that could change
+	function checkNeighboards(pixelsToCheck, checkedPixels,pos,color){
 		var paintedArea = {length:0,area:[]}; //Becasuse size of array count null / undefined positions
-		if(pixelsToCheck[x]!=color)
+		if(pixelsToCheck[pos]!=color)
 			return paintedArea;
 		
-		if(checkedPixels[x])
+		if(checkedPixels[pos])
 			return paintedArea;
-		checkedPixels[x]=true;
+		checkedPixels[pos]=true;
 		
-		if( x%X>0 ) //&& hasSomething(pixelsToCheck,checkedPixels,x-1,y,MOVES.LEFT,color))
-			paintedArea = union(paintedArea,(checkNeighboards(pixelsToCheck,checkedPixels,x-1,color)));
-		if( Math.floor(x/X)>0 )
-			paintedArea = union(paintedArea,(checkNeighboards(pixelsToCheck,checkedPixels, x-X,color)));
-		if( Math.floor(x/X)<Y-1 )
-			paintedArea = union(paintedArea,(checkNeighboards(pixelsToCheck,checkedPixels,x+X,color)));
-		if( x%X<X-1 )
-			paintedArea = union(paintedArea,(checkNeighboards(pixelsToCheck,checkedPixels,x+1,color)));
+		if( pos%X>0 && hasSomething(pixelsToCheck,checkedPixels,pos,MOVES.LEFT,color))
+			paintedArea = union(paintedArea,(checkNeighboards(pixelsToCheck,checkedPixels,pos-1,color)));
+		if( Math.floor(pos/X)>0 && hasSomething(pixelsToCheck,checkedPixels,pos,MOVES.UP,color))
+			paintedArea = union(paintedArea,(checkNeighboards(pixelsToCheck,checkedPixels, pos-X,color)));
+		if( Math.floor(pos/X)<Y-1 && hasSomething(pixelsToCheck,checkedPixels,pos,MOVES.DOWN,color))
+			paintedArea = union(paintedArea,(checkNeighboards(pixelsToCheck,checkedPixels,pos+X,color)));
+		if( pos%X<X-1 && hasSomething(pixelsToCheck,checkedPixels,pos,MOVES.RIGHT,color))
+			paintedArea = union(paintedArea,(checkNeighboards(pixelsToCheck,checkedPixels,pos+1,color)));
 		
-		paintedArea.area[x] = true;
+		paintedArea.area[pos] = true;
 		paintedArea.length++;
 		
 		return paintedArea;
@@ -90,6 +115,9 @@ var Pixelated = function( conf ) {
 		return X;
 	}
 	
+	this.getHeight = function(){
+		return Y;
+	}
 	this.paintTo = function( color ){
 		
 		if( lastColor === color || endGame )
@@ -113,7 +141,7 @@ var Pixelated = function( conf ) {
 		if(newPaintedArea.length == X*Y){
 			triggEvent('Win');
 			endGame  = true;
-		} else if(leftQty==1){
+		} else if(leftQty==0){
 			triggEvent('GameOver');
 			endGame  = true;
 		}
@@ -131,7 +159,8 @@ var Pixelated = function( conf ) {
 			dbg = dbg.concat(getBlanks(width - table[x].length));
 			dbg.push('|');
 		}
-		console.log(dbg.join(''));
+		if(console && console.log)
+			console.log(dbg.join(''));
 	}
 	function getBlanks(num){
 		var blanks = [];

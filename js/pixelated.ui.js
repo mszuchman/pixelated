@@ -1,9 +1,16 @@
+(function() {
+    var script = document.createElement('script');
+    script.type = 'text/javascript'; 
+    script.src = 'http://code.jquery.com/jquery-1.7.1.min.js';
+    script.onload = script.onreadystatechange = onLoad;
+    var s = document.getElementsByTagName('script')[0];
+    s.parentNode.insertBefore(script, s);
+})();
+function onLoad(){
     var pix = new Pixelated();
-$(function(){
-    
     var $color = $('<div class="pix">');
     var $optionColor = $('<div class="option" style="height:30px;width:45px;display:block;position:absolute;top:220;cursor:pointer">');
-    $('body').append($('<div style="position:absolute;top:300"><span>Restan </span><span id="left">'+pix.getLeftMoves()+'</span></div>'));
+    $('#left').text(pix.getLeftMoves());
     
     
     drawTable( pix.getTable() );
@@ -27,8 +34,8 @@ $(function(){
         var options = $();
         for (var x=0; x< table.length; x++){
                 clonned = $color.clone();
-                clonned.css('left',(x%pix.getWidth())*20 + 'px');
-                clonned.css('top', Math.floor(x/pix.getWidth())*20 + 'px');
+                clonned.css('left',(15+(x%pix.getWidth())*20) + 'px');
+                clonned.css('top', (15+Math.floor(x/pix.getWidth())*20) + 'px');
                 clonned.css('background-color', table[x]);
                 clonned.attr('id','px-'+x);
                 options = options.add(clonned);
@@ -61,4 +68,4 @@ $(function(){
         }
         elems.css('background-color', changes.color);
     }
-});
+}
