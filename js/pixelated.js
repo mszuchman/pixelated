@@ -4,10 +4,12 @@ var Pixelated = function( conf ) {
 	var Y = conf && conf.height || 9;
 	var colors = conf && conf.colors || ['red','green','blue','yellow','violet','orange'];
 	var leftQty = conf && conf.maxTries || 29;
+	var buildTable = conf && conf.buildStrategy || randomTable;
 	var table = buildTable();
 	var events = [];
 	var lastColor = table[0];
 	var endGame = false;
+	
 	var MOVES = {
 		LEFT : { move: function(pos){ return pos-1 }, canMove:function(pos){ return pos%X>0 }},
 		RIGHT : { move: function(pos){ return pos+1 }, canMove:function(pos){ return pos%X<X-1 }},
@@ -15,14 +17,21 @@ var Pixelated = function( conf ) {
 		DOWN : { move: function(pos){return pos+X },canMove:function(pos){return Math.floor(pos/X)<Y-1}}
 	}
 	
-	function buildTable() {
+	function randomTable() {
 		var table = [];
-		var originalColor = getAnyColorOf(colors);
 		var length = X*Y;
 		for (var x=0; x< length; x++){
 			table[x] = getAnyColorOf(colors);
 		}
 		return table;
+	}
+	function reBuildeableTable() {
+		var table = [];
+		var originalColor = getAnyColorOf(colors);
+		var length = X*Y;
+		for (var x=0; x< length; x++){
+			table[x] = originalColor;
+		}
 		var colorsToPaint = getElementsWithout(colors,originalColor);
 		for(var k=0; k<leftQty;k++){
 			color = getAnyColorOf(colorsToPaint);

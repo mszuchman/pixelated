@@ -50,9 +50,11 @@
     }
     
     canvas.addEventListener('click',function(e){
-        if(e.offsetY> (pixelsSize * (H+1)) && e.offsetY< (pixelsSize * (H+1) + 30)){
-            if(e.offsetX>60 && e.offsetX< 60*45*pix.getColors().length);
-                pix.paintTo(pix.getColors()[Math.ceil(e.offsetX / 60)-1]);
+        var x = e.offsetX || e.layerX;
+        var y = e.offsetY || e.layerY;
+        if(y> (pixelsSize * (H+1)) && y< (pixelsSize * (H+1) + 30)){
+            if(x>60 && x< 60*45*pix.getColors().length);
+                pix.paintTo(pix.getColors()[Math.ceil(x / 60)-1]);
         }
     });
     function tableChange(changes){
